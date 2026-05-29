@@ -282,6 +282,20 @@ Java_com_turboquant_ai_engine_TurboQuantEngine_nativeGenerate(
     LOGI("Generating, prompt length=%zu", formatted.size());
 
     // ── Tokenise ─────────────────────────────────────────────────────────
+    //
+    // BUG FIX: add_special must be TRUE only on the very first turn (empty
+    // KV cache).  Setting it to true on subsequent turns causes the BOS token
+    // to be injected a second time into an already-occupied context, which
+    // corrupts the conversation state and causes model crashes / gibberish
+    // on Turn 2+.
+    //
+    // We determine "first turn" by checking the KV cache occupancy: if no
+    // cells are used yet the context is fresh and BOS should be prepended.
+    const bool is_first_turn = (llama_get_kv_cache_used_cells(ctx) == 0);
+    LOGI("Tokenising, first_turn=%s, kv_used=%d",
+         is_first_turn ? "true" : "false",
+         llama_get_kv_cache_used_cells(ctx));
+
     const int max_tokens = static_cast<int>(formatted.size()) + 8;
     std::vector<llama_token> tokens(max_tokens);
     int n_tokens = llama_tokenize(
@@ -290,7 +304,7 @@ Java_com_turboquant_ai_engine_TurboQuantEngine_nativeGenerate(
             static_cast<int32_t>(formatted.size()),
             tokens.data(),
             static_cast<int32_t>(tokens.size()),
-            /*add_special=*/true,
+            /*add_special=*/is_first_turn,  // BOS only on first turn
             /*parse_special=*/true);
 
     if (n_tokens < 0) {

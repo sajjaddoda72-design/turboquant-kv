@@ -13,7 +13,13 @@ include(FetchContent)
 FetchContent_Declare(
     llama_cpp
     GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
-    GIT_TAG        master          # Pin to a specific tag / SHA for production
+    # Pin to a verified stable release that includes:
+    #   • GGML_TYPE_TQ2_0 (id=35) for 3-bit KV cache
+    #   • llama_sampler_chain_init / llama_sampler_accept
+    #   • llama_batch_get_one / llama_token_is_eog
+    #   • type_k / type_v in llama_context_params
+    # Update this tag after verifying the new release on a real device.
+    GIT_TAG        b4892
     GIT_SHALLOW    TRUE
     GIT_PROGRESS   TRUE
 )

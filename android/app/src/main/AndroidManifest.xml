@@ -4,8 +4,16 @@
     <!-- Required for Hugging Face model download (HTTPS) -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
-    <!-- Declare now; request at runtime before showing a download notification -->
+    <!-- POST_NOTIFICATIONS: user must grant this at runtime on Android 13+
+         before any notification (including the download progress bar) is shown.
+         The app requests it immediately on launch via MainActivity. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <!-- Required to start a foreground service (all API levels) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+
+    <!-- Required on Android 14+ (API 34) when foregroundServiceType="dataSync" -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
 
     <application
         android:name=".TurboQuantApp"
@@ -21,13 +29,8 @@
         android:hardwareAccelerated="true">
 
         <!--
-            largeHeap: Gemma 2B Q4_K_M requires ~1.5 GB of active memory.
-            Without this flag the default heap cap causes an OOM before the
-            model fully loads on most mid-range devices.
-
-            extractNativeLibs: libturboquant.so + llama.cpp/ggml shared
-            objects must be extracted to the filesystem so dlopen() can
-            load them at runtime (required for JNI).
+            largeHeap: Gemma 2B Q4_K_M needs ~1.5 GB of heap.
+            extractNativeLibs: libturboquant.so must be extracted to disk for dlopen().
         -->
 
         <activity
@@ -42,6 +45,17 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+        <!--
+            DownloadForegroundService:
+            • foregroundServiceType="dataSync" satisfies Android 14+ foreground service
+              restrictions for network I/O operations.
+            • exported="false" — only started from within this app.
+        -->
+        <service
+            android:name=".service.DownloadForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"/>
 
     </application>
 
