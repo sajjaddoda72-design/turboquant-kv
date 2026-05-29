@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TurboQuant AI</string>
+    <string name="model_name">Gemma 2B</string>
+    <string name="model_hub_title">Model Hub</string>
+    <string name="chat_hint">Ask TurboQuant…</string>
+    <string name="download_model">Download Model</string>
+    <string name="run_model">Run Model</string>
+    <string name="loading_message">Optimizing &amp; Loading Model with TurboQuant SIMD Engine… Please wait.</string>
+    <string name="kv_cache_badge">3-bit KV Cache Compression Active</string>
+    <string name="metrics_title">Performance Metrics</string>
+    <string name="requires_memory">Requires 2 GB Unified Memory</string>
+    <string name="app_version">v1.2.0</string>
+</resources>

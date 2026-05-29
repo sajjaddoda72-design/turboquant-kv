@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Network security configuration for TurboQuant AI.
+
+  All model downloads go through Hugging Face CDN over HTTPS — no cleartext
+  (HTTP) traffic is required.  This file explicitly trusts the standard
+  system CA store and documents the fact that cleartext is disabled (Android
+  default for API 28+ anyway).
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <!-- Trust the system-installed certificate authorities -->
+            <certificates src="system"/>
+        </trust-anchors>
+    </base-config>
+
+    <!-- Explicitly allow HTTPS access to the Hugging Face CDN -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">huggingface.co</domain>
+        <domain includeSubdomains="true">cdn-lfs.huggingface.co</domain>
+        <domain includeSubdomains="true">cdn-lfs-us-1.huggingface.co</domain>
+        <trust-anchors>
+            <certificates src="system"/>
+        </trust-anchors>
+    </domain-config>
+</network-security-config>
