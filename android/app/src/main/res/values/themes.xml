@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Minimal window theme for the Compose activity.
+  All visual theming is applied via Jetpack Compose (TurboQuantTheme).
+  The XML theme only needs to:
+    1. Remove the system action bar so Compose can own the full window.
+    2. Make status-bar and navigation-bar colours transparent for edge-to-edge.
+-->
+<resources>
+    <style name="Theme.TurboQuantAI" parent="android:Theme.Material.NoTitleBar">
+        <!-- OLED-black window background avoids white flash on cold-start -->
+        <item name="android:windowBackground">@android:color/black</item>
+        <!-- Edge-to-edge: let Compose control the bars via WindowInsets -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <!-- windowLightStatusBar / windowLightNavigationBar are set at runtime
+             by Activity.enableEdgeToEdge() — no need to declare here. -->
+    </style>
+</resources>

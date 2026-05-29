@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  TurboQuant AI app icon foreground.
+  Design: Neural-network processor chip with a lightning-bolt "Turbo" symbol.
+  Colour: Crimson Red #D32F2F on transparent (background layer supplies #0B0C10).
+  Safe-zone: all artwork fits within the 72×72 dp safe circle centred at (54,54).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- ── Neural connection traces (faint, 30 % crimson) ──────────────── -->
+    <path
+        android:strokeColor="#4DD32F2F"
+        android:strokeWidth="1.5"
+        android:fillColor="#00000000"
+        android:pathData="
+            M54,24 L54,37
+            M54,71 L54,84
+            M24,54 L37,54
+            M71,54 L84,54
+            M29,29 L39,39
+            M79,29 L69,39
+            M29,79 L39,69
+            M79,79 L69,69"/>
+
+    <!-- ── Processor chip body ─────────────────────────────────────────── -->
+    <!-- Outer square with 10 % crimson fill -->
+    <path
+        android:fillColor="#1AD32F2F"
+        android:strokeColor="#D32F2F"
+        android:strokeWidth="2.5"
+        android:pathData="M37,37 L71,37 L71,71 L37,71 Z"/>
+
+    <!-- Top pins -->
+    <path
+        android:strokeColor="#D32F2F"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M45,37 L45,30 M54,37 L54,30 M63,37 L63,30"/>
+
+    <!-- Bottom pins -->
+    <path
+        android:strokeColor="#D32F2F"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M45,71 L45,78 M54,71 L54,78 M63,71 L63,78"/>
+
+    <!-- Left pins -->
+    <path
+        android:strokeColor="#D32F2F"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M37,45 L30,45 M37,54 L30,54 M37,63 L30,63"/>
+
+    <!-- Right pins -->
+    <path
+        android:strokeColor="#D32F2F"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M71,45 L78,45 M71,54 L78,54 M71,63 L78,63"/>
+
+    <!-- Inner chip border (inset 5 dp from outer) -->
+    <path
+        android:strokeColor="#D32F2F"
+        android:strokeWidth="1"
+        android:fillColor="#00000000"
+        android:pathData="M43,43 L65,43 L65,65 L43,65 Z"/>
+
+    <!-- ── Lightning bolt (TurboQuant "Turbo" symbol) ─────────────────── -->
+    <!-- Bolt shape: upper-right arm + lower-left arm, solid crimson fill -->
+    <path
+        android:fillColor="#D32F2F"
+        android:pathData="M57,43 L48,56 L54.5,56 L51,65 L60,52 L53.5,52 Z"/>
+
+    <!-- ── Corner neural nodes (diamond / rhombus shapes) ─────────────── -->
+    <!-- Top-left  (24,24) -->
+    <path android:fillColor="#D32F2F"
+          android:pathData="M24,20 L28,24 L24,28 L20,24 Z"/>
+    <!-- Top-right (84,24) -->
+    <path android:fillColor="#D32F2F"
+          android:pathData="M84,20 L88,24 L84,28 L80,24 Z"/>
+    <!-- Bottom-left (24,84) -->
+    <path android:fillColor="#D32F2F"
+          android:pathData="M24,80 L28,84 L24,88 L20,84 Z"/>
+    <!-- Bottom-right (84,84) -->
+    <path android:fillColor="#D32F2F"
+          android:pathData="M84,80 L88,84 L84,88 L80,84 Z"/>
+
+    <!-- ── Cardinal neural nodes (small squares) ──────────────────────── -->
+    <!-- Top -->
+    <path android:fillColor="#D32F2F"
+          android:pathData="M51,19 L57,19 L57,25 L51,25 Z"/>
+    <!-- Bottom -->
+    <path android:fillColor="#D32F2F"
+          android:pathData="M51,83 L57,83 L57,89 L51,89 Z"/>
+    <!-- Left -->
+    <path android:fillColor="#D32F2F"
+          android:pathData="M19,51 L25,51 L25,57 L19,57 Z"/>
+    <!-- Right -->
+    <path android:fillColor="#D32F2F"
+          android:pathData="M83,51 L89,51 L89,57 L83,57 Z"/>
+
+</vector>
