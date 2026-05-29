@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>TurboQuant AI</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+
+  <!-- Tailwind Design Token Config (Material You Dark · Crimson Red) -->
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "on-primary":                "#680008",
+            "surface-variant":           "#343439",
+            "secondary":                 "#c8c6c5",
+            "on-error-container":        "#ffdad6",
+            "on-secondary-fixed":        "#1b1b1c",
+            "surface-dim":               "#121317",
+            "surface":                   "#121317",
+            "surface-container-low":     "#1a1b20",
+            "on-error":                  "#690005",
+            "tertiary":                  "#7bd1f8",
+            "on-tertiary-container":     "#e9f7ff",
+            "background":                "#121317",
+            "on-tertiary-fixed":         "#001f2a",
+            "secondary-fixed":           "#e5e2e1",
+            "primary-fixed":             "#ffdad6",
+            "surface-tint":              "#ffb3ac",
+            "on-primary-fixed-variant":  "#930010",
+            "surface-container-high":    "#292a2e",
+            "secondary-container":       "#474746",
+            "on-tertiary":               "#003546",
+            "on-background":             "#e3e2e8",
+            "tertiary-fixed-dim":        "#7bd1f8",
+            "surface-container":         "#1f1f24",
+            "on-secondary":              "#303030",
+            "primary-fixed-dim":         "#ffb3ac",
+            "surface-bright":            "#38393e",
+            "outline-variant":           "#5b403d",
+            "surface-container-highest": "#343439",
+            "on-surface-variant":        "#e4beba",
+            "on-secondary-fixed-variant":"#474746",
+            "outline":                   "#ab8985",
+            "surface-container-lowest":  "#0d0e12",
+            "inverse-surface":           "#e3e2e8",
+            "tertiary-fixed":            "#bee9ff",
+            "inverse-primary":           "#ba1a20",
+            "primary":                   "#ffb3ac",   /* Material You light-mode primary (salmon) */
+            "error-container":           "#93000a",
+            "on-primary-fixed":          "#410003",
+            "on-surface":                "#e3e2e8",
+            "primary-container":         "#d32f2f",   /* Crimson Red #D32F2F */
+            "inverse-on-surface":        "#2f3035",
+            "error":                     "#ffb4ab",
+            "secondary-fixed-dim":       "#c8c6c5",
+            "on-secondary-container":    "#b7b5b4",
+            "tertiary-container":        "#00799c",
+            "on-primary-container":      "#fff2f0",
+            "on-tertiary-fixed-variant": "#004d65"
+          },
+          borderRadius: {
+            DEFAULT: "0.25rem",
+            lg:      "0.5rem",
+            xl:      "0.75rem",
+            full:    "9999px"
+          },
+          spacing: {
+            gutter:                       "16px",
+            "container-padding-mobile":   "24px",
+            base:                         "8px",
+            "stack-lg":                   "40px",
+            "stack-sm":                   "12px",
+            "container-padding-desktop":  "48px",
+            "stack-md":                   "24px"
+          },
+          fontFamily: {
+            "body-lg":            ["Inter"],
+            "label-sm":           ["Inter"],
+            "headline-lg-mobile": ["Inter"],
+            "display-lg":         ["Inter"],
+            "body-md":            ["Inter"],
+            "headline-lg":        ["Inter"],
+            "label-md":           ["Inter"]
+          },
+          fontSize: {
+            "body-lg":            ["18px", { lineHeight: "28px",  fontWeight: "400" }],
+            "label-sm":           ["12px", { lineHeight: "16px",  letterSpacing: "0.05em", fontWeight: "600" }],
+            "headline-lg-mobile": ["28px", { lineHeight: "36px",  fontWeight: "600" }],
+            "display-lg":         ["40px", { lineHeight: "48px",  letterSpacing: "-0.02em", fontWeight: "700" }],
+            "body-md":            ["16px", { lineHeight: "24px",  fontWeight: "400" }],
+            "headline-lg":        ["32px", { lineHeight: "40px",  letterSpacing: "-0.01em", fontWeight: "600" }],
+            "label-md":           ["14px", { lineHeight: "20px",  letterSpacing: "0.01em", fontWeight: "500" }]
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* ================================================================
+       BASE
+       ================================================================ */
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      background-color: #0B0C10;
+      color: #e3e2e8;
+      min-height: max(884px, 100dvh);
+      overflow-x: hidden;
+    }
+
+    /* ================================================================
+       MATERIAL SYMBOLS
+       ================================================================ */
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+
+    /* ================================================================
+       GLASSMORPHISM
+       ================================================================ */
+
+    /* Hub card — subtle crimson tint overlay */
+    .glass-hub {
+      background-color: #121212;
+      position: relative;
+    }
+    .glass-hub::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(211, 47, 47, 0.03);
+      backdrop-filter: blur(20px);
+      border-radius: inherit;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .glass-hub-content { position: relative; z-index: 1; }
+
+    /* Chat / overlay panels */
+    .glass-panel {
+      background-color: rgba(18, 18, 18, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    /* Shared inner-edge highlight */
+    .glass-edge {
+      box-shadow: inset 1px 1px 0px rgba(255, 255, 255, 0.05);
+    }
+
+    /* ================================================================
+       CRIMSON BUTTONS
+       ================================================================ */
+
+    /* Download (default) */
+    .btn-crimson {
+      background: rgba(211, 47, 47, 0.18);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(211, 47, 47, 0.8);
+      box-shadow: 0 0 16px rgba(211, 47, 47, 0.28),
+                  inset 1px 1px 0px rgba(255, 255, 255, 0.18);
+      transition: all 0.3s ease;
+      color: #fff;
+    }
+    .btn-crimson:hover {
+      background: rgba(211, 47, 47, 0.30);
+      box-shadow: 0 0 28px rgba(211, 47, 47, 0.50),
+                  inset 1px 1px 0px rgba(255, 255, 255, 0.28);
+      transform: translateY(-2px);
+    }
+
+    /* Run Model — stronger glow */
+    .btn-run {
+      background: rgba(211, 47, 47, 0.32);
+      backdrop-filter: blur(20px);
+      border: 1px solid #d32f2f;
+      box-shadow: 0 0 28px rgba(211, 47, 47, 0.60),
+                  0 0 64px rgba(211, 47, 47, 0.18),
+                  inset 1px 1px 0px rgba(255, 255, 255, 0.24);
+      transition: all 0.3s ease;
+      color: #fff;
+    }
+    .btn-run:hover {
+      background: rgba(211, 47, 47, 0.48);
+      box-shadow: 0 0 44px rgba(211, 47, 47, 0.80),
+                  0 0 88px rgba(211, 47, 47, 0.28),
+                  inset 1px 1px 0px rgba(255, 255, 255, 0.32);
+      transform: translateY(-2px);
+    }
+
+    /* Downloading — disabled */
+    .btn-downloading {
+      background: rgba(211, 47, 47, 0.10);
+      border: 1px solid rgba(211, 47, 47, 0.35);
+      opacity: 0.65;
+      cursor: not-allowed;
+      color: #fff;
+    }
+
+    /* ================================================================
+       CRIMSON GLOW (badge / FAB / metrics)
+       ================================================================ */
+    .crimson-glow {
+      box-shadow: 0 0 15px rgba(211, 47, 47, 0.35);
+    }
+
+    /* ================================================================
+       LOADING SPINNER
+       ================================================================ */
+    .pulse-ring {
+      animation: pulseRing 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulseRing {
+      0%   { transform: scale(0.80); opacity: 0.5; box-shadow: 0 0 0 0   rgba(211, 47, 47, 0.70); }
+      70%  { transform: scale(1.00); opacity: 1.0; box-shadow: 0 0 0 20px rgba(211, 47, 47, 0); }
+      100% { transform: scale(0.80); opacity: 0.5; box-shadow: 0 0 0 0   rgba(211, 47, 47, 0); }
+    }
+
+    .spin-slow { animation: spinSlow 3s linear infinite; }
+    @keyframes spinSlow {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ================================================================
+       METRICS OVERLAY SLIDE-UP
+       ================================================================ */
+    #metrics-overlay {
+      transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+      transform: translateY(100%);
+    }
+    #metrics-overlay.active { transform: translateY(0); }
+
+    /* ================================================================
+       SCREEN MANAGEMENT
+       ================================================================ */
+    .screen {
+      display: none;
+      flex-direction: column;
+      min-height: max(884px, 100dvh);
+      width: 100%;
+    }
+    .screen.active { display: flex; }
+
+    /* Loading overlay (sits on top of Hub screen) */
+    #loading-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      background: rgba(11, 12, 16, 0.88);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+    }
+    #loading-overlay.active { display: flex; }
+
+    /* ================================================================
+       FADE-IN TRANSITION
+       ================================================================ */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .fade-in { animation: fadeIn 0.38s ease forwards; }
+  </style>
+</head>
+
+<body class="antialiased font-body-md text-body-md text-on-surface">
+
+  <!-- ================================================================
+       SCREEN 1 ─ MODEL HUB  (initial / entry screen)
+       ================================================================ -->
+  <div class="screen active" id="screen-hub">
+
+    <!-- Top App Bar -->
+    <header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center
+                   px-container-padding-mobile h-16
+                   bg-surface/80 backdrop-blur-xl border-b border-white/10">
+      <div class="flex items-center gap-3">
+        <span class="material-symbols-outlined text-primary text-2xl">memory</span>
+        <h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold tracking-tight text-primary">
+          TurboQuant AI
+        </h1>
+      </div>
+      <div class="w-8 h-8 rounded-full bg-surface-container-high overflow-hidden border border-white/10">
+        <div class="w-full h-full bg-gradient-to-br from-primary-container to-surface-variant
+                    flex items-center justify-center text-white font-bold font-label-sm">
+          U
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow w-full max-w-[1200px] mx-auto
+                 px-container-padding-mobile md:px-container-padding-desktop
+                 pt-stack-lg mt-16 pb-24 md:pb-8
+                 flex flex-col md:grid md:grid-cols-12 gap-stack-md relative z-10">
+
+      <div class="col-span-12 md:col-span-8 md:col-start-3">
+
+        <!-- Central Gemma 2B Card -->
+        <div class="glass-hub rounded-xl glass-edge overflow-hidden p-6 md:p-8 flex flex-col gap-stack-md">
+          <div class="glass-hub-content w-full">
+
+            <!-- Model Header -->
+            <div class="flex items-start justify-between mb-stack-sm">
+              <div>
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full
+                            bg-surface-container-high text-primary font-label-sm text-label-sm mb-4">
+                  <span class="material-symbols-outlined text-[16px]">bolt</span>
+                  Optimized
+                </div>
+                <h2 class="font-display-lg text-display-lg text-on-surface mb-2">Gemma 2B</h2>
+                <p class="font-body-md text-body-md text-on-surface-variant max-w-lg">
+                  Lightweight, state-of-the-art open model optimized for on-device inference
+                  and high-speed execution.
+                </p>
+              </div>
+            </div>
+
+            <!-- Model Details Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-stack-md mb-stack-lg">
+              <!-- Model Size -->
+              <div class="bg-surface-container-low rounded-lg p-4 border border-white/5 flex flex-col gap-2">
+                <div class="flex items-center gap-2 text-on-surface-variant">
+                  <span class="material-symbols-outlined text-[20px]">sd_storage</span>
+                  <span class="font-label-sm text-label-sm uppercase tracking-wider">Model Size</span>
+                </div>
+                <span class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">
+                  1.5 <span class="text-body-md text-on-surface-variant">GB</span>
+                </span>
+              </div>
+              <!-- Context Window -->
+              <div class="bg-surface-container-low rounded-lg p-4 border border-white/5 flex flex-col gap-2">
+                <div class="flex items-center gap-2 text-on-surface-variant">
+                  <span class="material-symbols-outlined text-[20px]">view_kanban</span>
+                  <span class="font-label-sm text-label-sm uppercase tracking-wider">Context Window</span>
+                </div>
+                <span class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">2048</span>
+              </div>
+              <!-- Quantization -->
+              <div class="bg-surface-container-low rounded-lg p-4 border border-white/5
+                          flex flex-col gap-2 col-span-2 md:col-span-1">
+                <div class="flex items-center gap-2 text-on-surface-variant">
+                  <span class="material-symbols-outlined text-[20px]">compress</span>
+                  <span class="font-label-sm text-label-sm uppercase tracking-wider">Quantization</span>
+                </div>
+                <span class="font-headline-lg-mobile text-headline-lg-mobile text-primary">Q4_K_M</span>
+              </div>
+            </div>
+
+            <!-- Download Progress (hidden until download starts) -->
+            <div class="mb-5 hidden" id="dl-progress-wrap">
+              <div class="flex justify-between items-center mb-2">
+                <span class="font-label-sm text-label-sm text-on-surface-variant">
+                  Downloading Gemma 2B...
+                </span>
+                <span class="font-label-sm text-label-sm text-primary" id="dl-pct-label">0%</span>
+              </div>
+              <div class="h-1.5 w-full bg-surface-variant rounded-full overflow-hidden">
+                <div class="h-full bg-primary rounded-full relative transition-all duration-150"
+                     id="dl-bar" style="width:0%">
+                  <div class="absolute inset-0 bg-white/20 animate-pulse rounded-full"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Button (Download → Run Model) -->
+            <button id="action-btn"
+                    class="w-full md:w-auto btn-crimson font-label-md text-label-md
+                           py-4 px-8 rounded-lg flex items-center justify-center gap-2">
+              <span class="material-symbols-outlined" id="action-icon">download</span>
+              <span id="action-label">Download Model</span>
+            </button>
+
+          </div>
+        </div>
+
+        <!-- Footer Meta -->
+        <div class="mt-stack-sm px-4 flex items-center justify-between opacity-50">
+          <span class="font-label-sm text-label-sm text-on-surface-variant">
+            Requires 2GB Unified Memory
+          </span>
+          <span class="font-label-sm text-label-sm text-on-surface-variant">v1.2.0</span>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- Bottom Nav (Mobile only) -->
+    <nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center
+                px-4 py-base bg-surface-container-low/60 backdrop-blur-xl
+                border-t border-white/5">
+      <!-- Hub (active) -->
+      <div class="flex flex-col items-center justify-center
+                  bg-primary-container/20 text-primary border border-primary/30
+                  rounded-xl px-4 py-1">
+        <span class="material-symbols-outlined"
+              style="font-variation-settings:'FILL' 1">grid_view</span>
+        <span class="font-label-sm text-label-sm mt-1">Hub</span>
+      </div>
+      <!-- Chat -->
+      <div class="flex flex-col items-center justify-center
+                  text-on-surface-variant opacity-50 px-4 py-1 cursor-pointer
+                  hover:text-primary/80 transition-all"
+           onclick="gotoChat()">
+        <span class="material-symbols-outlined">forum</span>
+        <span class="font-label-sm text-label-sm mt-1">Chat</span>
+      </div>
+      <!-- Metrics -->
+      <div class="flex flex-col items-center justify-center
+                  text-on-surface-variant opacity-50 px-4 py-1">
+        <span class="material-symbols-outlined">insights</span>
+        <span class="font-label-sm text-label-sm mt-1">Metrics</span>
+      </div>
+    </nav>
+
+  </div><!-- /screen-hub -->
+
+
+  <!-- ================================================================
+       LOADING OVERLAY  (appears over Hub when "Run Model" is pressed)
+       ================================================================ -->
+  <div id="loading-overlay">
+    <div class="flex flex-col items-center justify-center max-w-md w-full
+                px-container-padding-mobile text-center">
+
+      <!-- Layered Spinner -->
+      <div class="relative w-32 h-32 mb-stack-lg flex items-center justify-center">
+        <!-- Outer pulse ring -->
+        <div class="absolute inset-0 rounded-full border border-primary/20 pulse-ring"></div>
+        <!-- Slow rotating dashed track -->
+        <svg class="absolute inset-0 w-full h-full spin-slow text-surface-variant"
+             viewBox="0 0 100 100">
+          <circle cx="50" cy="50" fill="none" r="45"
+                  stroke="currentColor" stroke-dasharray="10 20" stroke-width="2"/>
+        </svg>
+        <!-- Fast gradient arc spinner -->
+        <svg class="absolute inset-2 w-28 h-28 animate-spin text-primary"
+             style="animation-duration:1.5s" viewBox="0 0 100 100">
+          <defs>
+            <linearGradient id="sg" x1="0%" x2="100%" y1="0%" y2="100%">
+              <stop offset="0%"   stop-color="currentColor" stop-opacity="1"/>
+              <stop offset="100%" stop-color="currentColor" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <circle cx="50" cy="50" fill="none" r="40"
+                  stroke="url(#sg)" stroke-dasharray="180 800"
+                  stroke-linecap="round" stroke-width="4"/>
+        </svg>
+        <!-- Centre icon -->
+        <div class="bg-surface/50 backdrop-blur-md rounded-full w-16 h-16
+                    flex items-center justify-center
+                    border-t border-l border-white/10
+                    shadow-[inset_0_0_15px_rgba(211,47,47,0.15)]">
+          <span class="material-symbols-outlined text-primary text-3xl">memory</span>
+        </div>
+      </div>
+
+      <!-- Text Card -->
+      <div class="bg-[#121212]/85 backdrop-blur-md border-t border-l border-white/5
+                  rounded-xl p-6 w-full relative overflow-hidden">
+        <!-- Top accent line -->
+        <div class="absolute top-0 left-0 w-full h-[1px]
+                    bg-gradient-to-r from-transparent via-primary/35 to-transparent">
+        </div>
+
+        <h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface
+                   mb-stack-sm flex items-center justify-center gap-2">
+          Initializing
+          <span class="flex gap-1 items-center">
+            <span class="w-1.5 h-1.5 rounded-full bg-primary animate-bounce"
+                  style="animation-delay:0s"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-primary animate-bounce"
+                  style="animation-delay:0.2s"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-primary animate-bounce"
+                  style="animation-delay:0.4s"></span>
+          </span>
+        </h2>
+
+        <p class="font-body-md text-body-md text-on-surface-variant">
+          Optimizing &amp; Loading Model with TurboQuant SIMD Engine... Please wait.
+        </p>
+
+        <!-- Init progress bar -->
+        <div class="mt-6 h-1 w-full bg-surface-variant rounded-full overflow-hidden">
+          <div class="h-full bg-primary rounded-full relative transition-all duration-150"
+               id="init-bar" style="width:0%">
+            <div class="absolute inset-0 bg-white/20 animate-pulse rounded-full"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /loading-overlay -->
+
+
+  <!-- ================================================================
+       SCREEN 3 ─ LIVE AI CHAT & DASHBOARD
+       ================================================================ -->
+  <div class="screen" id="screen-chat">
+
+    <!-- Top App Bar -->
+    <header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center
+                   px-container-padding-mobile h-16
+                   bg-surface/80 backdrop-blur-xl border-b border-white/10">
+      <div class="flex items-center gap-3">
+        <span class="material-symbols-outlined text-primary text-[24px]">memory</span>
+        <h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold tracking-tight text-primary">
+          TurboQuant AI
+        </h1>
+      </div>
+      <div class="w-8 h-8 rounded-full bg-surface-container overflow-hidden border border-white/10">
+        <div class="w-full h-full bg-gradient-to-br from-primary-container to-surface-variant
+                    flex items-center justify-center text-white font-bold font-label-sm">
+          U
+        </div>
+      </div>
+    </header>
+
+    <!-- Chat Body -->
+    <main class="flex-1 flex flex-col pt-20 pb-28 px-container-padding-mobile
+                 max-w-[1200px] mx-auto w-full relative z-10 overflow-y-auto">
+
+      <!-- KV Cache Status Badge -->
+      <div class="flex justify-center mb-stack-md">
+        <div class="inline-flex items-center gap-2 bg-surface-container-low
+                    px-4 py-2 rounded-full border border-primary/20 glass-edge crimson-glow">
+          <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+          <span class="font-label-sm text-label-sm text-primary uppercase tracking-wider">
+            3-bit KV Cache Compression Active
+          </span>
+        </div>
+      </div>
+
+      <!-- Chat History -->
+      <div class="flex flex-col gap-stack-md">
+
+        <!-- User Bubble -->
+        <div class="flex justify-end">
+          <div class="bg-surface-container px-4 py-3 rounded-2xl rounded-tr-sm
+                      max-w-[85%] border border-white/5 glass-edge">
+            <p class="text-on-surface">
+              Can you analyze the latest quarterly earnings report for AAPL
+              and summarize the key revenue drivers?
+            </p>
+          </div>
+        </div>
+
+        <!-- AI Bubble (text) -->
+        <div class="flex justify-start">
+          <div class="flex gap-3 max-w-[90%]">
+            <div class="w-8 h-8 rounded-full bg-primary/20 flex-shrink-0
+                        flex items-center justify-center border border-primary/30 mt-1">
+              <span class="material-symbols-outlined text-primary text-[18px]">memory</span>
+            </div>
+            <div class="bg-surface-container-low px-4 py-4 rounded-2xl rounded-tl-sm
+                        border border-white/5 glass-edge">
+              <p class="text-on-surface mb-3">
+                Based on the recent AAPL earnings data, here are the primary
+                revenue drivers analyzed in real-time:
+              </p>
+              <ul class="list-disc pl-5 space-y-2 text-on-surface-variant mb-4">
+                <li>
+                  <strong>Services Segment Growth:</strong> Achieved a record high,
+                  driven by strong performance in App Store subscriptions and iCloud.
+                </li>
+                <li>
+                  <strong>Wearables and Home:</strong> Steady year-over-year increase,
+                  primarily from new Apple Watch models.
+                </li>
+                <li>
+                  <strong>Emerging Markets:</strong> Significant double-digit growth
+                  in India and Latin America.
+                </li>
+              </ul>
+              <div class="bg-surface p-3 rounded-lg border border-white/5 text-sm
+                          font-mono text-tertiary/80">
+                Latency: 42ms | Tokens: 412
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- User Bubble -->
+        <div class="flex justify-end">
+          <div class="bg-surface-container px-4 py-3 rounded-2xl rounded-tr-sm
+                      max-w-[85%] border border-white/5 glass-edge">
+            <p class="text-on-surface">
+              Generate a Python script to visualize this data using matplotlib.
+            </p>
+          </div>
+        </div>
+
+        <!-- AI Bubble (code) -->
+        <div class="flex justify-start">
+          <div class="flex gap-3 max-w-[90%]">
+            <div class="w-8 h-8 rounded-full bg-primary/20 flex-shrink-0
+                        flex items-center justify-center border border-primary/30 mt-1">
+              <span class="material-symbols-outlined text-primary text-[18px]">memory</span>
+            </div>
+            <div class="bg-surface-container-low px-4 py-4 rounded-2xl rounded-tl-sm
+                        border border-white/5 glass-edge w-full">
+              <p class="text-on-surface mb-3">
+                Here is the Python script to visualize the revenue drivers:
+              </p>
+              <div class="bg-[#1E1E1E] rounded-lg border border-white/10
+                          overflow-hidden font-mono text-sm">
+                <div class="px-4 py-2 border-b border-white/10 text-on-surface-variant
+                            flex justify-between items-center bg-surface-dim">
+                  <span>visualization.py</span>
+                  <span class="material-symbols-outlined text-[16px] cursor-pointer
+                               hover:text-primary transition-colors">content_copy</span>
+                </div>
+                <pre class="p-4 overflow-x-auto text-secondary"><code>import matplotlib.pyplot as plt
+
+categories = ['Services', 'Wearables', 'Emerging Mkts']
+growth = [15.2, 8.4, 22.1]
+
+fig, ax = plt.subplots(figsize=(8, 5))
+bars = ax.bar(categories, growth, color='#d32f2f')
+
+ax.set_ylabel('YoY Growth (%)')
+ax.set_title('AAPL Q3 Revenue Drivers')
+
+plt.show()</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- Chat Input Bar -->
+    <div class="fixed bottom-16 md:bottom-0 left-0 w-full z-40
+                bg-gradient-to-t from-[#0B0C10] via-[#0B0C10]/90 to-transparent
+                pt-10 pb-4 px-container-padding-mobile">
+      <div class="max-w-[800px] mx-auto relative">
+        <input
+          class="w-full bg-[#1E1E1E] text-on-surface border border-white/10 rounded-full
+                 py-4 pl-6 pr-14 focus:outline-none focus:border-primary
+                 focus:ring-1 focus:ring-primary/50 transition-all
+                 shadow-[0_0_20px_rgba(0,0,0,0.5)]"
+          placeholder="Ask TurboQuant..."
+          type="text"
+        />
+        <button class="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full
+                       bg-primary-container/20 flex items-center justify-center text-primary
+                       hover:bg-primary-container/40 transition-colors">
+          <span class="material-symbols-outlined"
+                style="font-variation-settings:'FILL' 1">send</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- FAB — Metrics / Insights -->
+    <button id="fab-metrics"
+            class="fixed bottom-24 right-container-padding-mobile
+                   md:bottom-8 md:right-8
+                   w-14 h-14 rounded-full
+                   bg-primary-container/20 backdrop-blur-xl
+                   border border-primary text-white
+                   flex items-center justify-center
+                   crimson-glow z-50
+                   hover:scale-105 active:scale-95
+                   transition-transform shadow-lg">
+      <span class="material-symbols-outlined text-[28px]">insights</span>
+    </button>
+
+    <!-- ── Metric Dashboard Overlay (slides up from bottom) ── -->
+    <div id="metrics-overlay"
+         class="fixed inset-x-0 bottom-0 h-[560px] md:h-[480px]
+                z-[60] glass-panel border-t border-white/10 rounded-t-3xl
+                shadow-[0_-10px_40px_rgba(0,0,0,0.5)]
+                flex flex-col">
+
+      <!-- Drag Handle -->
+      <div class="w-full flex justify-center pt-3 pb-1">
+        <div class="w-12 h-1.5 rounded-full bg-white/20"></div>
+      </div>
+
+      <!-- Overlay Header -->
+      <div class="flex justify-between items-center px-6 py-4 border-b border-white/5">
+        <h2 class="font-headline-lg-mobile text-headline-lg-mobile
+                   text-primary font-bold tracking-tight">
+          Performance Metrics
+        </h2>
+        <!-- Close Button (Crimson Red X) -->
+        <button id="close-metrics"
+                class="w-8 h-8 rounded-full bg-primary-container/25
+                       flex items-center justify-center
+                       text-primary border border-primary/50
+                       hover:bg-primary-container/45 transition-colors crimson-glow">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <!-- Metrics Bento Grid -->
+      <div class="flex-1 overflow-y-auto p-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+          <!-- Generation Speed (wide) -->
+          <div class="col-span-2 bg-surface-container-low rounded-2xl p-5
+                      border border-white/5 glass-edge flex flex-col justify-between">
+            <div class="flex items-center gap-2 text-on-surface-variant mb-3">
+              <span class="material-symbols-outlined text-[18px]">bolt</span>
+              <span class="font-label-sm text-label-sm uppercase">Generation Speed</span>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span class="text-display-lg font-display-lg text-primary">--</span>
+              <span class="text-body-md text-on-surface-variant">Token/Second</span>
+            </div>
+          </div>
+
+          <!-- RAM Saved -->
+          <div class="col-span-1 bg-surface-container-low rounded-2xl p-5
+                      border border-white/5 glass-edge flex flex-col justify-between">
+            <div class="flex items-center gap-2 text-on-surface-variant mb-3">
+              <span class="material-symbols-outlined text-[18px]">save</span>
+              <span class="font-label-sm text-label-sm uppercase">RAM Saved</span>
+            </div>
+            <div class="flex items-baseline gap-1">
+              <span class="text-headline-lg font-headline-lg text-white">--</span>
+              <span class="text-body-md text-primary">%</span>
+            </div>
+          </div>
+
+          <!-- MSE -->
+          <div class="col-span-1 bg-surface-container-low rounded-2xl p-5
+                      border border-white/5 glass-edge flex flex-col justify-between">
+            <div class="flex items-center gap-2 text-on-surface-variant mb-3">
+              <span class="material-symbols-outlined text-[18px]">analytics</span>
+              <span class="font-label-sm text-label-sm uppercase">MSE</span>
+            </div>
+            <div class="flex items-baseline gap-1">
+              <span class="text-headline-lg font-headline-lg text-white">--</span>
+            </div>
+          </div>
+
+          <!-- KV Cache Compression (full width) -->
+          <div class="col-span-2 md:col-span-4 bg-surface-container-low rounded-2xl p-5
+                      border border-white/5 glass-edge flex flex-col gap-4">
+            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase">
+              KV Cache Compression (3-bit)
+            </span>
+
+            <!-- Visual bars -->
+            <div class="space-y-3">
+              <div>
+                <div class="flex justify-between text-xs text-on-surface-variant mb-1">
+                  <span>Original KV Cache Size</span>
+                  <span>-- MB</span>
+                </div>
+                <div class="h-2 w-full bg-surface-bright rounded-full overflow-hidden">
+                  <div class="h-full bg-secondary-container w-full"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-xs text-primary font-bold mb-1">
+                  <span>TurboQuant Cache Size</span>
+                  <span>-- MB</span>
+                </div>
+                <div class="h-2 w-full bg-surface-bright rounded-full overflow-hidden">
+                  <div class="h-full bg-primary w-0 crimson-glow"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Stat list (all placeholders) -->
+            <div class="border-t border-white/5 pt-4 flex flex-col gap-2 text-sm">
+              <div class="flex justify-between">
+                <span class="text-on-surface-variant">Mean Squared Error (MSE)</span>
+                <span class="text-on-surface font-medium">--</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-on-surface-variant">Original KV Cache Size</span>
+                <span class="text-on-surface font-medium">-- MB</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-on-surface-variant">TurboQuant Cache Size</span>
+                <span class="text-on-surface font-medium">-- MB</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-on-surface-variant">RAM Saved</span>
+                <span class="text-on-surface font-medium">--%</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-on-surface-variant">Generation Speed</span>
+                <span class="text-on-surface font-medium">-- Token/Second</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div><!-- /metrics-overlay -->
+
+    <!-- Backdrop for metrics overlay -->
+    <div id="backdrop"
+         class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50
+                hidden opacity-0 transition-opacity duration-300">
+    </div>
+
+    <!-- Bottom Nav (Mobile only) -->
+    <nav class="md:hidden fixed bottom-0 left-0 w-full z-[45] flex justify-around items-center
+                px-4 py-base bg-surface-container-low/60 backdrop-blur-xl
+                border-t border-white/5 rounded-t-xl">
+      <!-- Hub -->
+      <div class="flex flex-col items-center justify-center
+                  text-on-surface-variant opacity-50 px-4 py-1 cursor-pointer
+                  hover:text-primary/80 transition-all"
+           onclick="gotoHub()">
+        <span class="material-symbols-outlined">grid_view</span>
+        <span class="font-label-sm text-label-sm">Hub</span>
+      </div>
+      <!-- Chat (active) -->
+      <div class="flex flex-col items-center justify-center
+                  bg-primary-container/20 text-primary border border-primary/30
+                  rounded-xl px-4 py-1">
+        <span class="material-symbols-outlined"
+              style="font-variation-settings:'FILL' 1">forum</span>
+        <span class="font-label-sm text-label-sm">Chat</span>
+      </div>
+      <!-- Metrics -->
+      <div class="flex flex-col items-center justify-center
+                  text-on-surface-variant opacity-50 px-4 py-1 cursor-pointer
+                  hover:text-primary/80 transition-all"
+           onclick="document.getElementById('fab-metrics').click()">
+        <span class="material-symbols-outlined">insights</span>
+        <span class="font-label-sm text-label-sm">Metrics</span>
+      </div>
+    </nav>
+
+  </div><!-- /screen-chat -->
+
+
+  <!-- ================================================================
+       JAVASCRIPT
+       ================================================================ -->
+  <script>
+    /* ──────────────────────────────────────────────────────────────
+       Screen management
+    ────────────────────────────────────────────────────────────── */
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => {
+        s.classList.remove('active', 'fade-in');
+      });
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('active');
+      // Re-trigger animation on each visit
+      void el.offsetWidth;
+      el.classList.add('fade-in');
+    }
+
+    function gotoHub()  { showScreen('screen-hub'); }
+    function gotoChat() { showScreen('screen-chat'); }
+
+
+    /* ──────────────────────────────────────────────────────────────
+       Download → Run Model flow
+    ────────────────────────────────────────────────────────────── */
+    let modelReady = false;
+
+    const actionBtn   = document.getElementById('action-btn');
+    const actionIcon  = document.getElementById('action-icon');
+    const actionLabel = document.getElementById('action-label');
+    const dlWrap      = document.getElementById('dl-progress-wrap');
+    const dlBar       = document.getElementById('dl-bar');
+    const dlPctLabel  = document.getElementById('dl-pct-label');
+
+    actionBtn.addEventListener('click', () => {
+      if (modelReady) {
+        startLoading();
+      } else if (!actionBtn.disabled) {
+        startDownload();
+      }
+    });
+
+    function startDownload() {
+      // Button → downloading state
+      actionBtn.className = 'w-full md:w-auto btn-downloading font-label-md text-label-md ' +
+                            'py-4 px-8 rounded-lg flex items-center justify-center gap-2';
+      actionIcon.textContent  = 'downloading';
+      actionLabel.textContent = 'Downloading...';
+      actionBtn.disabled = true;
+
+      // Show progress bar
+      dlWrap.classList.remove('hidden');
+
+      let pct = 0;
+      const timer = setInterval(() => {
+        pct += Math.random() * 3.5 + 0.8;
+        if (pct >= 100) {
+          pct = 100;
+          clearInterval(timer);
+          dlBar.style.width        = '100%';
+          dlPctLabel.textContent   = '100%';
+
+          // Short pause, then switch to "Run Model"
+          setTimeout(() => {
+            dlWrap.classList.add('hidden');
+            modelReady = true;
+            actionBtn.disabled = false;
+            actionBtn.className = 'w-full md:w-auto btn-run font-label-md text-label-md ' +
+                                  'py-4 px-8 rounded-lg flex items-center justify-center gap-2';
+            actionIcon.textContent  = 'play_arrow';
+            actionLabel.textContent = 'Run Model';
+          }, 450);
+        }
+        dlBar.style.width      = pct + '%';
+        dlPctLabel.textContent = Math.round(pct) + '%';
+      }, 75);
+    }
+
+
+    /* ──────────────────────────────────────────────────────────────
+       Loading overlay animation → Chat screen
+    ────────────────────────────────────────────────────────────── */
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const initBar        = document.getElementById('init-bar');
+
+    function startLoading() {
+      loadingOverlay.classList.add('active');
+      initBar.style.width = '0%';
+
+      let pct = 0;
+      const timer = setInterval(() => {
+        pct += Math.random() * 2.8 + 0.7;
+        if (pct >= 100) {
+          pct = 100;
+          clearInterval(timer);
+          initBar.style.width = '100%';
+
+          // Slight pause at 100%, then reveal chat
+          setTimeout(() => {
+            loadingOverlay.classList.remove('active');
+            gotoChat();
+          }, 480);
+        }
+        initBar.style.width = pct + '%';
+      }, 55);
+    }
+
+
+    /* ──────────────────────────────────────────────────────────────
+       Metrics overlay toggle (FAB + close button + backdrop)
+    ────────────────────────────────────────────────────────────── */
+    document.addEventListener('DOMContentLoaded', () => {
+      const fab       = document.getElementById('fab-metrics');
+      const overlay   = document.getElementById('metrics-overlay');
+      const closeBtn  = document.getElementById('close-metrics');
+      const backdrop  = document.getElementById('backdrop');
+
+      function openMetrics() {
+        backdrop.classList.remove('hidden');
+        void backdrop.offsetWidth;               // force reflow for transition
+        backdrop.style.opacity = '1';
+        overlay.classList.add('active');
+      }
+
+      function closeMetrics() {
+        overlay.classList.remove('active');
+        backdrop.style.opacity = '0';
+        setTimeout(() => backdrop.classList.add('hidden'), 320);
+      }
+
+      fab.addEventListener('click',      openMetrics);
+      closeBtn.addEventListener('click', closeMetrics);
+      backdrop.addEventListener('click', closeMetrics);
+    });
+  </script>
+
+</body>
+</html>
