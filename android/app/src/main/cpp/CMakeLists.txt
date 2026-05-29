@@ -35,10 +35,11 @@ set(GGML_OPENMP            OFF CACHE BOOL "" FORCE)
 set(GGML_VULKAN            OFF CACHE BOOL "" FORCE)
 set(GGML_SYCL              OFF CACHE BOOL "" FORCE)
 
-# Enable ARM NEON where available
-if(ANDROID_ABI STREQUAL "arm64-v8a")
-    set(GGML_CPU_ARM_ARCH "armv8-a+simd" CACHE STRING "" FORCE)
-endif()
+# ARM NEON is baseline on all ARMv8-A processors — NDK enables it automatically.
+# Do NOT set GGML_CPU_ARM_ARCH here: llama.cpp's configure-time CPU detection
+# runs a test executable that cannot execute on the x86 Colab host, causing a
+# spurious "unknown target CPU" error even though the ARM64 cross-compiler is
+# perfectly capable.  Removing this lets llama.cpp auto-detect correctly.
 
 FetchContent_MakeAvailable(llama_cpp)
 
@@ -70,12 +71,12 @@ target_link_libraries(turboquant
 if(ANDROID_ABI STREQUAL "arm64-v8a")
     target_compile_options(turboquant PRIVATE
         -O3
-        -march=armv8-a+simd
+        -march=armv8-a          # NEON is mandatory on all ARMv8-A, already active
         -ffast-math
         -ftree-vectorize
         -fomit-frame-pointer
     )
-    # Expose NEON to our SIMD code
+    # Explicit define so our turboquant_simd.cpp uses the NEON fast path
     target_compile_definitions(turboquant PRIVATE __ARM_NEON=1)
 endif()
 
