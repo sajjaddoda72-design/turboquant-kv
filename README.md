@@ -219,8 +219,8 @@ llama_context *ctx = llama_init_from_model(model, cp);
 
 ```bash
 # Clone and enter the repository
-git clone https://github.com/sajjaddoda72-design/Gemma-2.git
-cd Gemma-2/ggml
+git clone https://github.com/sajjaddoda72-design/turboquant-kv.git
+cd turboquant-kv/ggml
 
 # Configure (CMake ≥ 3.22, C++17)
 cmake -B build -DCMAKE_BUILD_TYPE=Release \
@@ -326,7 +326,7 @@ If you use TQ3\_0 in your research, please cite:
              On-Device LLM Inference},
   author  = {sajjaddoda72-design},
   year    = {2026},
-  url     = {https://github.com/sajjaddoda72-design/Gemma-2},
+  url     = {https://github.com/sajjaddoda72-design/turboquant-kv},
   note    = {ggml integration, ARM NEON + AVX2 optimised}
 }
 ```
