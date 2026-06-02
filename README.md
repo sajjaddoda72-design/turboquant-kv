@@ -326,7 +326,7 @@ If you use TQ3\_0 in your research, please cite:
              On-Device LLM Inference},
   author  = {sajjaddoda72-design},
   year    = {2026},
-  url     = {https://github.com/sajjaddoda72-design/Gemma-2},
+  url     = {https://github.com/sajjaddoda72-design/turboquant-kv},
   note    = {ggml integration, ARM NEON + AVX2 optimised}
 }
 ```
