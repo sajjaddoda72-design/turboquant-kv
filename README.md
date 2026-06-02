@@ -9,6 +9,27 @@
 
 ---
 
+## Status
+
+| Component | Status |
+|---|---|
+| `GGML_TYPE_TQ3_0 = 36` registration | ✅ Complete |
+| `block_tq3_0` struct + bit-packing | ✅ Complete |
+| `quantize_row_tq3_0` + `dequantize_row_tq3_0` | ✅ Complete |
+| ARM NEON fast path (`vdotq_s32`) | ✅ Complete |
+| AVX2 fast path | ✅ Complete |
+| `ggml_vec_dot_tq3_0_q8_0` (attention dot product) | ✅ Complete |
+| `type_traits_cpu` registration | ✅ Complete |
+| `ops.cpp` dispatch (7 switch blocks) | ✅ Complete |
+| Standalone benchmark | ✅ Complete — see `benchmarks/benchmark_tq3.c` |
+| F16 perplexity baseline (WikiText-2) | ✅ **PPL = 19.2358** (Gemma 2B Q4\_K\_M, 512 ctx) |
+| TQ3\_0 perplexity measurement | 🔄 In progress |
+| llama.cpp full inference integration | 🔄 Blocked — see [Known Issue](#known-integration-issue) below |
+
+---
+
+---
+
 ## Abstract
 
 TurboQuant TQ3\_0 is a novel **3.5 bits-per-element** quantization scheme designed
@@ -265,6 +286,33 @@ ggml/
 benchmarks/
 └── benchmark_tq3.c                     # standalone reproducible benchmark
 ```
+
+---
+
+## Known Integration Issue
+
+When integrating TQ3\_0 as a KV cache type in llama.cpp, Flash Attention is
+auto-enabled in `src/llama-context.cpp:488` even after `cparams.flash_attn`
+is explicitly set to `false` for type 36. This causes the `ggml_flash_attn_ext`
+kernel to receive TQ3\_0 tensors (which it does not support), triggering an
+assertion failure:
+
+```
+ggml/src/ggml-cpu/ops.cpp: GGML_ASSERT(nbv0 == ggml_type_size(v->type)) failed
+```
+
+**Root cause:** The auto-detection block at line 455 (`if (cparams.auto_fa)`)
+unconditionally re-enables flash attention regardless of KV type.
+
+**Fix required** (one line in `llama-context.cpp`):
+```cpp
+// After line 492 — inside the auto_fa resolution block:
+if ((int)params.type_k == 36 || (int)params.type_v == 36) {
+    cparams.flash_attn = false;  // TQ3_0 uses standard attention path
+}
+```
+
+**Tracking:** Contributions and PRs to resolve this are welcome.
 
 ---
 
