@@ -1,0 +1,11 @@
+--- a/src/llama-context.cpp
++++ b/src/llama-context.cpp
+@@ -489,6 +489,11 @@ inside the if(cparams.auto_fa) block, after "cparams.auto_fa = false;" line:
+ 
+         cparams.auto_fa = false;
++
++        // TQ3_0: disable flash attention for 3-bit KV cache type
++        if ((int)cparams.type_k == 36 || (int)cparams.type_v == 36) {
++            cparams.flash_attn = false;
++        }
+     }
