@@ -1,8 +1,14 @@
 # OpenEvolve framework
 openevolve>=0.2.27
 
-# Deep learning
+# Deep learning (GPU — install the CUDA-enabled wheel on Colab)
 torch>=2.0.0
 
 # Numerical
 numpy>=1.22.0
+
+# Local LLM server — Qwen 2.5 Coder Q4_K_M (GGUF)
+# Install with CUDA support on Colab:
+#   pip install llama-cpp-python[server] \
+#       --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121
+llama-cpp-python>=0.3.0
