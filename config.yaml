@@ -4,7 +4,7 @@
 # ============================================================
 
 # --- General ---
-max_iterations: 50
+max_iterations: 500              # 50 جيل × 10 عينة = 500 مرشح إجمالي
 checkpoint_interval: 5
 log_level: "INFO"
 random_seed: 42
