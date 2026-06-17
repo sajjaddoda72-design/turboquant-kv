@@ -16,57 +16,68 @@ early_stopping_patience: 15       # stop if no improvement for 15 iterations
 convergence_threshold: 0.005      # minimum delta to count as improvement
 early_stopping_metric: "combined_score"
 
-# --- LLM (Qwen 2.5 Coder — local llama-cpp-python server on Colab) ---
-# Setup required in Colab BEFORE running OpenEvolve:
-#   1. pip install llama-cpp-python[server] (with CUDA support)
-#   2. Download model GGUF from HuggingFace
-#   3. Start server:  python -m llama_cpp.server --model /path/to/model.gguf \
-#                         --host 0.0.0.0 --port 8000 --n_gpu_layers -1 &
-# Recommended model size: 7B Q4_K_M (~4.5 GB VRAM, fits alongside evaluator on T4)
+# --- LLM: Gemini 3.5 Flash (free tier — 1,500 req/day, 10 RPM) ---
+# Set your key in Colab:  import os; os.environ["GEMINI_API_KEY"] = "AIza..."
 llm:
   models:
-    - name: "qwen2.5-coder"        # Name ignored by llama-cpp-python; can be anything
-      weight: 1.0
+    - name: "gemini-3.5-flash"     # best free-tier model for code (June 2026)
+      weight: 0.8
+    - name: "gemini-3.1-flash-lite" # fast fallback; 15 RPM on free tier
+      weight: 0.2
 
   evaluator_models:
-    - name: "qwen2.5-coder"
+    - name: "gemini-3.1-flash-lite"
       weight: 1.0
 
-  api_base: "http://localhost:8000/v1"   # llama-cpp-python OpenAI-compat endpoint
-  api_key: "local"                        # Required field; ignored by local server
+  api_base: "https://generativelanguage.googleapis.com/v1beta/openai/"
+  api_key: ${GEMINI_API_KEY}
 
   temperature: 0.8
   top_p: 0.95
-  max_tokens: 4096                # Local models are slower; keep context moderate
-  timeout: 300                    # Local inference is slower than cloud API
+  max_tokens: 8192
+  timeout: 120
   retries: 3
-  retry_delay: 10
+  retry_delay: 8
 
 # --- Prompt ---
 prompt:
   system_message: >
     You are an expert ML engineer specialising in deep learning training optimisation.
     Your task is to improve the decide() method of a UniversalAdaptiveController.
-    The controller manages five training hyperparameters in real time:
+
+    The controller manages five hyperparameters in real time:
       • learning rate (LR)
       • batch size
       • gradient checkpointing (on/off)
       • AMP / mixed-precision (on/off)
       • data pruning ratio (curriculum learning)
-    The current state of training is described by a ControllerState object
-    (loss trends, memory pressure, step time, etc.).
-    Your goal: maximise combined_score = 0.6 × loss_score + 0.2 × speed_score + 0.2 × vram_score.
-    IMPORTANT: only modify code between the EVOLVE-BLOCK-START and EVOLVE-BLOCK-END markers.
-    Do not change any other part of the file.
 
-  evaluator_system_message: "You are an expert code reviewer for ML training optimisation code."
+    The evaluation function scores each controller on FOUR metrics:
+      1. loss_score     (50%) — did training converge? (initial → final loss drop)
+      2. stability_score (20%) — is the final training phase smooth and stable?
+                                 (low coefficient-of-variation in last 50 steps)
+      3. speed_score    (15%) — throughput (faster step time = higher score)
+      4. vram_score     (15%) — VRAM efficiency
+
+    combined_score = 0.50×loss + 0.20×stability + 0.15×speed + 0.15×vram
+
+    Each evolved program receives "artifacts" showing:
+      - loss convergence info
+      - stability CV value
+      - batch size evolution (start → end, min, max)
+    Use these to understand how the controller actually behaved.
+
+    IMPORTANT: ONLY modify the code between EVOLVE-BLOCK-START and EVOLVE-BLOCK-END.
+    Do NOT change any other part of the file.
+
+  evaluator_system_message: "You are an expert code reviewer for ML training optimisation."
 
   num_top_programs: 3
   num_diverse_programs: 2
   use_template_stochasticity: true
 
-  include_artifacts: true
-  max_artifact_bytes: 10240
+  include_artifacts: true           # pass batch/loss/stability info to LLM
+  max_artifact_bytes: 12288
 
 # --- Database / Population ---
 database:
@@ -85,8 +96,8 @@ database:
 
 # --- Evaluator ---
 evaluator:
-  timeout: 240          # seconds — generous for GPU warm-up on T4
+  timeout: 300            # generous for GPU warm-up on T4 + 200-step run
   max_retries: 2
   cascade_evaluation: false
-  parallel_evaluations: 2
+  parallel_evaluations: 1  # IMPORTANT: free tier = 10 RPM → keep at 1
   use_llm_feedback: false
