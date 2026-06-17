@@ -1,20 +1,27 @@
 """
-Evaluator for Universal Adaptive Controller — REAL metrics.
+Evaluator for Universal Adaptive Controller — REAL metrics (v2).
 
-Measures 3 real-world dimensions on GPU (T4) or CPU:
-  1) loss_score  (60%) — convergence quality
-  2) speed_score (20%) — throughput (steps/sec)
-  3) vram_score  (20%) — peak VRAM efficiency
+Four metrics from a single deterministic 200-step training run:
+
+  1. loss_score     (50%) — convergence quality: initial vs final loss
+  2. stability_score (20%) — smoothness of the final training phase
+  3. speed_score    (15%) — step throughput
+  4. vram_score     (15%) — peak VRAM efficiency
+
+Additive formula — never collapses to zero from one bad metric:
+  combined = 0.50 × loss + 0.20 × stability + 0.15 × speed + 0.15 × vram
 
 Design goals:
-  - Deterministic: seeded dataset → same controller → same score.
-  - Non-collapsing: additive scoring (never zeros out from a single bad metric).
-  - Realistic: fixed-label dataset so the model can actually learn.
+  - Deterministic (seeded) → same controller → same score every run.
+  - Fixed-label dataset    → model can actually learn (no random labels).
+  - stability_score        → rewards controllers that stabilise training,
+                             not just ones that accidentally drop one value.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import json
 import math
 import os
 import sys
@@ -26,7 +33,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-# Support both standalone use and use from within OpenEvolve.
+# ---------------------------------------------------------------------------
+#  OpenEvolve integration (optional — degrades gracefully without it)
+# ---------------------------------------------------------------------------
+
 try:
     from openevolve.evaluation_result import EvaluationResult
     _HAS_OPENEVOLVE = True
@@ -34,8 +44,13 @@ except ImportError:
     _HAS_OPENEVOLVE = False
 
     class EvaluationResult:  # type: ignore[no-redef]
-        """Minimal fallback when openevolve is not installed."""
-        def __init__(self, metrics: Dict[str, Any], artifacts: Dict[str, Any] | None = None):
+        """Minimal shim when openevolve is not installed."""
+
+        def __init__(
+            self,
+            metrics: Dict[str, Any],
+            artifacts: Dict[str, Any] | None = None,
+        ) -> None:
             self.metrics = metrics
             self.artifacts = artifacts or {}
 
@@ -48,7 +63,7 @@ except ImportError:
 #  Internal helpers
 # ---------------------------------------------------------------------------
 
-def _import_controller(path: str):
+def _import_controller(path: str) -> Any:
     """Load a candidate program file as a Python module."""
     spec = importlib.util.spec_from_file_location("candidate", path)
     if spec is None or spec.loader is None:
@@ -60,14 +75,19 @@ def _import_controller(path: str):
 
 class _FixedDataset(torch.utils.data.Dataset):
     """
-    Deterministic synthetic dataset.
+    Deterministic fixed-label dataset (seed = 42).
 
-    Each index always returns the SAME (x, label) pair so that:
-    - The model can actually learn (no contradictory gradients).
-    - Repeated evaluations of the same controller give the same score.
+    __getitem__(i) always returns the same (x, label) pair, so the model
+    can learn a consistent mapping and scores are reproducible.
     """
 
-    def __init__(self, n: int = 512, input_dim: int = 64, n_classes: int = 10, seed: int = 42):
+    def __init__(
+        self,
+        n: int = 512,
+        input_dim: int = 64,
+        n_classes: int = 10,
+        seed: int = 42,
+    ) -> None:
         gen = torch.Generator().manual_seed(seed)
         self.x = torch.randn(n, input_dim, generator=gen)
         self.y = torch.randint(0, n_classes, (n,), generator=gen)
@@ -80,9 +100,19 @@ class _FixedDataset(torch.utils.data.Dataset):
 
 
 class _TinyModel(nn.Module):
-    """Small 3-layer MLP — fast to train, large enough to overfit the fixed dataset."""
+    """
+    3-layer MLP: 64 → 256 → 128 → 10 (~50 K parameters).
 
-    def __init__(self, input_dim: int = 64, hidden: int = 256, n_classes: int = 10):
+    Fast to train; large enough to overfit the 512-sample fixed dataset
+    within ~200 steps so the evaluation gives a meaningful loss signal.
+    """
+
+    def __init__(
+        self,
+        input_dim: int = 64,
+        hidden: int = 256,
+        n_classes: int = 10,
+    ) -> None:
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(input_dim, hidden),
@@ -96,20 +126,30 @@ class _TinyModel(nn.Module):
         return self.net(x)
 
 
-def _run_real_simulation(controller_module: Any, steps: int = 150) -> Dict[str, Any]:
-    """
-    Run a real (short) training loop and return telemetry.
+# ---------------------------------------------------------------------------
+#  Core simulation
+# ---------------------------------------------------------------------------
 
-    The controller_module is the candidate EVOLVE-BLOCK under evaluation.
+def _run_real_simulation(
+    controller_module: Any,
+    steps: int = 200,
+) -> Dict[str, Any]:
     """
-    # --- setup ---
+    Run a short, fully deterministic training loop and return telemetry.
+
+    Signals collected:
+      losses       — per-step cross-entropy (finite values only)
+      step_times   — wall-clock seconds per step
+      batch_sizes  — effective batch size at each step
+      peak_vram_gb — peak GPU memory (0.0 on CPU)
+    """
     torch.manual_seed(42)
     np.random.seed(42)
 
     cfg = controller_module.ControllerConfig(
         cooldown_steps=2,
         warmup_steps=10,
-        log_every=1000,  # suppress per-step logging during evaluation
+        log_every=99999,
         verbose=False,
     )
 
@@ -123,7 +163,7 @@ def _run_real_simulation(controller_module: Any, steps: int = 150) -> Dict[str, 
         initial_batch_size=32,
         pruning_ratio=0.0,
         num_workers=0,
-        pin_memory=False,  # pin_memory=True causes issues when device is CPU
+        pin_memory=False,
         seed=0,
     )
 
@@ -142,13 +182,12 @@ def _run_real_simulation(controller_module: Any, steps: int = 150) -> Dict[str, 
         torch.cuda.reset_peak_memory_stats(device)
         torch.cuda.synchronize()
 
-    # --- training loop ---
     losses: List[float] = []
     step_times: List[float] = []
+    batch_sizes: List[int] = []
     data_iter = iter(loader)
 
     for _ in range(steps):
-        # Refill iterator when the epoch ends.
         try:
             batch_x, batch_y = next(data_iter)
         except StopIteration:
@@ -171,7 +210,7 @@ def _run_real_simulation(controller_module: Any, steps: int = 150) -> Dict[str, 
         step_dt = time.perf_counter() - t0
 
         per_loss = torch.full((batch_x.size(0),), loss.item())
-        state, _action = controller.step(
+        _state, _action = controller.step(
             loss,
             per_sample_losses=per_loss,
             batch_indices=batch_indices,
@@ -182,6 +221,7 @@ def _run_real_simulation(controller_module: Any, steps: int = 150) -> Dict[str, 
         if math.isfinite(loss_val):
             losses.append(loss_val)
         step_times.append(step_dt)
+        batch_sizes.append(controller._current_effective_batch_size())
 
         if device.type == "cuda":
             torch.cuda.synchronize()
@@ -195,32 +235,24 @@ def _run_real_simulation(controller_module: Any, steps: int = 150) -> Dict[str, 
         else 0.0
     )
 
-    # Robust initial/final loss: average first 10 and last 20 finite steps.
-    warmup = min(10, len(losses) // 4)
-    tail = min(20, len(losses) // 4)
-    initial_loss = float(np.mean(losses[:warmup]))
-    final_loss = float(np.mean(losses[-tail:]))
-
     return {
         "losses": losses,
         "step_times": step_times,
+        "batch_sizes": batch_sizes,
         "peak_vram_gb": peak_vram_gb,
-        "initial_loss": initial_loss,
-        "final_loss": final_loss,
         "device": device.type,
     }
 
 
 # ---------------------------------------------------------------------------
-#  Public evaluate() — called by OpenEvolve
+#  Public API — called by OpenEvolve
 # ---------------------------------------------------------------------------
 
-def evaluate(program_path: str) -> Dict[str, Any]:
+def evaluate(program_path: str) -> Any:
     """
-    Evaluate a candidate controller and return metrics.
+    Evaluate a candidate controller; return a dict or EvaluationResult.
 
-    Returns a dict (or EvaluationResult) with at minimum:
-      combined_score  ∈ [0, 1] — higher is better
+    The *combined_score* key drives OpenEvolve's selection pressure.
     """
     try:
         eval_dir = os.path.dirname(os.path.abspath(program_path))
@@ -228,81 +260,106 @@ def evaluate(program_path: str) -> Dict[str, Any]:
             sys.path.insert(0, eval_dir)
 
         mod = _import_controller(program_path)
-        tel = _run_real_simulation(mod, steps=150)
+        tel = _run_real_simulation(mod, steps=200)
+        losses: List[float] = tel["losses"]
+        n = len(losses)
 
-        # --- loss score (0-1) ---
-        init_loss = tel["initial_loss"]
-        final_loss = tel["final_loss"]
-        loss_drop = max(0.0, (init_loss - final_loss) / max(init_loss, 1e-6))
-        # Penalise if training diverged (final > 1.5× initial).
-        stability_penalty = 1.0 if final_loss < init_loss * 1.5 else 0.3
-        # Scale: a 33 % drop → score ≈ 1.0; smaller drops score proportionally.
-        loss_score = float(min(1.0, loss_drop * 3.0) * stability_penalty)
+        # ── 1. loss_score (50%) ─────────────────────────────────────────
+        # Average first 10 steps vs average of last 20 steps.
+        # A ≥ 33% drop → score ≈ 1.0; proportional below that.
+        warmup_n = max(1, min(10, n // 5))
+        tail_n   = max(1, min(20, n // 4))
+        initial_loss = float(np.mean(losses[:warmup_n]))
+        final_loss   = float(np.mean(losses[-tail_n:]))
+        loss_drop    = max(0.0, (initial_loss - final_loss) / max(initial_loss, 1e-6))
+        diverge_pen  = 1.0 if final_loss < initial_loss * 1.5 else 0.3
+        loss_score   = float(min(1.0, loss_drop * 3.0) * diverge_pen)
 
-        # --- speed score (0-1) ---
-        avg_step_s = float(np.mean(tel["step_times"]))
-        # At 20 steps/sec the denominator = 2 → score = 0.5; at 50 steps/sec = 1.
+        # ── 2. stability_score (20%) ────────────────────────────────────
+        # Coefficient of variation (σ/μ) of the last 50 loss values.
+        # Low CV → smooth final phase → high score.
+        window           = losses[-min(50, n):]
+        cv               = float(np.std(window) / (np.mean(window) + 1e-6))
+        stability_score  = float(1.0 / (1.0 + cv * 5.0))
+
+        # ── 3. speed_score (15%) ────────────────────────────────────────
+        avg_step_s  = float(np.mean(tel["step_times"]))
         speed_score = float(1.0 / (1.0 + avg_step_s * 20.0))
 
-        # --- VRAM score (0-1) ---
-        vram_gb = float(tel["peak_vram_gb"])
-        # On CPU vram_gb == 0 → perfect score.
+        # ── 4. vram_score (15%) ─────────────────────────────────────────
+        vram_gb    = float(tel["peak_vram_gb"])
         vram_score = 1.0 if vram_gb == 0.0 else float(max(0.0, 1.0 - vram_gb / 8.0))
 
-        # --- combined (additive — never collapses to zero from one bad metric) ---
-        combined = float(0.6 * loss_score + 0.2 * speed_score + 0.2 * vram_score)
+        # ── Combined (additive) ──────────────────────────────────────────
+        combined = float(
+            0.50 * loss_score
+            + 0.20 * stability_score
+            + 0.15 * speed_score
+            + 0.15 * vram_score
+        )
 
-        metrics = {
-            "combined_score": combined,
-            "loss_score": loss_score,
-            "speed_score": speed_score,
-            "vram_score": vram_score,
-            "initial_loss": init_loss,
-            "final_loss": final_loss,
-            "loss_drop_pct": float(loss_drop * 100.0),
-            "avg_step_ms": float(avg_step_s * 1000.0),
-            "peak_vram_gb": vram_gb,
+        metrics: Dict[str, Any] = {
+            "combined_score":   combined,
+            "loss_score":       loss_score,
+            "stability_score":  stability_score,
+            "speed_score":      speed_score,
+            "vram_score":       vram_score,
+            "initial_loss":     initial_loss,
+            "final_loss":       final_loss,
+            "loss_drop_pct":    float(loss_drop * 100.0),
+            "avg_step_ms":      float(avg_step_s * 1000.0),
+            "peak_vram_gb":     vram_gb,
         }
 
         if _HAS_OPENEVOLVE:
-            artifacts = {
-                "device": tel["device"],
-                "training_steps": len(tel["losses"]),
-                "convergence_info": (
-                    f"loss {init_loss:.4f} → {final_loss:.4f} "
-                    f"(drop {loss_drop * 100:.1f}%)"
-                ),
-            }
-            return EvaluationResult(metrics=metrics, artifacts=artifacts)
+            bs = tel["batch_sizes"]
+            return EvaluationResult(
+                metrics=metrics,
+                artifacts={
+                    "device":         tel["device"],
+                    "training_steps": n,
+                    "convergence":    (
+                        f"loss {initial_loss:.4f} → {final_loss:.4f} "
+                        f"(↓{loss_drop * 100:.1f}%)"
+                    ),
+                    "stability":      f"CV(last 50) = {cv:.4f}",
+                    "batch_evolution": (
+                        f"start={bs[0]}, end={bs[-1]}, "
+                        f"min={min(bs)}, max={max(bs)}"
+                    ),
+                },
+            )
 
         return metrics
 
     except Exception as exc:  # noqa: BLE001
         tb = traceback.format_exc()
-        error_metrics = {
-            "combined_score": 0.0,
-            "loss_score": 0.0,
-            "speed_score": 0.0,
-            "vram_score": 0.0,
-            "error": str(exc)[:300],
+        error_metrics: Dict[str, Any] = {
+            "combined_score":  0.0,
+            "loss_score":      0.0,
+            "stability_score": 0.0,
+            "speed_score":     0.0,
+            "vram_score":      0.0,
+            "error":           str(exc)[:300],
         }
         if _HAS_OPENEVOLVE:
             return EvaluationResult(
                 metrics=error_metrics,
-                artifacts={"traceback": tb[:1000], "error_type": type(exc).__name__},
+                artifacts={
+                    "traceback":  tb[:1000],
+                    "error_type": type(exc).__name__,
+                },
             )
         error_metrics["traceback"] = tb[:500]
         return error_metrics
 
 
 # ---------------------------------------------------------------------------
-#  Standalone runner — for quick local testing
+#  Standalone runner
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     program = sys.argv[1] if len(sys.argv) > 1 else "initial_program.py"
-    result = evaluate(program)
-    if hasattr(result, "metrics"):
-        print(result.metrics)
-    else:
-        print(result)
+    result  = evaluate(program)
+    payload = result.metrics if hasattr(result, "metrics") else result
+    print(json.dumps(payload, indent=2))
